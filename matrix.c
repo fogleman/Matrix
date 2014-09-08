@@ -9,29 +9,27 @@ typedef struct {
 static PyTypeObject MatrixType;
 
 static int Matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
-    float *data = self->data;
-    int i = 0;
-
-    data[i++] = 1;
-    data[i++] = 0;
-    data[i++] = 0;
-    data[i++] = 0;
-
-    data[i++] = 0;
-    data[i++] = 1;
-    data[i++] = 0;
-    data[i++] = 0;
-
-    data[i++] = 0;
-    data[i++] = 0;
-    data[i++] = 1;
-    data[i++] = 0;
-
-    data[i++] = 0;
-    data[i++] = 0;
-    data[i++] = 0;
-    data[i++] = 1;
-
+    PyObject *arg = NULL;
+    if (!PyArg_ParseTuple(args, "|O", &arg)) {
+        return -1;
+    }
+    if (arg) {
+        for (int i = 0; i < 16; i++) {
+            PyObject *item = PySequence_GetItem(arg, i);
+            if (item == NULL) {
+                return -1;
+            }
+            self->data[i] = PyFloat_AsDouble(item);
+        }
+    }
+    else {
+        int i = 0;
+        float *d = self->data;
+        d[i++] = 1; d[i++] = 0; d[i++] = 0; d[i++] = 0;
+        d[i++] = 0; d[i++] = 1; d[i++] = 0; d[i++] = 0;
+        d[i++] = 0; d[i++] = 0; d[i++] = 1; d[i++] = 0;
+        d[i++] = 0; d[i++] = 0; d[i++] = 0; d[i++] = 1;
+    }
     return 0;
 }
 
@@ -40,7 +38,6 @@ static void Matrix_dealloc(Matrix *self) {
 }
 
 static PyObject *Matrix_value(Matrix *self) {
-    PyObject *obj = PyObject_CallObject((PyObject *)&MatrixType, NULL);
     float *data = self->data;
     PyObject *result = PyTuple_New(16);
     for (int i = 0; i < 16; i++) {
@@ -49,12 +46,17 @@ static PyObject *Matrix_value(Matrix *self) {
     return result;
 }
 
+static PyObject *Matrix_identity(Matrix *self) {
+    return PyObject_CallObject((PyObject *)&MatrixType, NULL);
+}
+
 static PyMemberDef Matrix_members[] = {
     {NULL}
 };
 
 static PyMethodDef Matrix_methods[] = {
     {"value", (PyCFunction)Matrix_value, METH_NOARGS, ""},
+    {"identity", (PyCFunction)Matrix_identity, METH_NOARGS, ""},
     {NULL}
 };
 
