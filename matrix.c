@@ -3,12 +3,12 @@
 
 typedef struct {
     PyObject_HEAD
-    float data[16];
+    double data[16];
 } Matrix;
 
 static PyTypeObject MatrixType;
 
-static int Matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
+static int matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
     PyObject *arg = NULL;
     if (!PyArg_ParseTuple(args, "|O", &arg)) {
         return -1;
@@ -24,7 +24,7 @@ static int Matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
     }
     else {
         int i = 0;
-        float *d = self->data;
+        double *d = self->data;
         d[i++] = 1; d[i++] = 0; d[i++] = 0; d[i++] = 0;
         d[i++] = 0; d[i++] = 1; d[i++] = 0; d[i++] = 0;
         d[i++] = 0; d[i++] = 0; d[i++] = 1; d[i++] = 0;
@@ -33,12 +33,12 @@ static int Matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
     return 0;
 }
 
-static void Matrix_dealloc(Matrix *self) {
+static void matrix_dealloc(Matrix *self) {
     self->ob_type->tp_free((PyObject *)self);
 }
 
-static PyObject *Matrix_value(Matrix *self) {
-    float *data = self->data;
+static PyObject *matrix_value(Matrix *self) {
+    double *data = self->data;
     PyObject *result = PyTuple_New(16);
     for (int i = 0; i < 16; i++) {
         PyTuple_SetItem(result, i, Py_BuildValue("f", data[i]));
@@ -46,60 +46,136 @@ static PyObject *Matrix_value(Matrix *self) {
     return result;
 }
 
-static PyObject *Matrix_identity(Matrix *self) {
+static PyObject *matrix_identity(Matrix *self) {
     return PyObject_CallObject((PyObject *)&MatrixType, NULL);
 }
 
-static PyMemberDef Matrix_members[] = {
+static PyObject *matrix_matrix_multiply(Matrix *self, Matrix *arg) {
+    Matrix *result = (Matrix *)matrix_identity(NULL);
+    double *data = result->data;
+    double *a = self->data;
+    double *b = arg->data;
+    int i = 0;
+    data[i++] = a[ 0] * b[ 0] + a[ 4] * b[ 1] + a[ 8] * b[ 2] + a[12] * b[ 3];
+    data[i++] = a[ 1] * b[ 0] + a[ 5] * b[ 1] + a[ 9] * b[ 2] + a[13] * b[ 3];
+    data[i++] = a[ 2] * b[ 0] + a[ 6] * b[ 1] + a[10] * b[ 2] + a[14] * b[ 3];
+    data[i++] = a[ 3] * b[ 0] + a[ 7] * b[ 1] + a[11] * b[ 2] + a[15] * b[ 3];
+    data[i++] = a[ 0] * b[ 4] + a[ 4] * b[ 5] + a[ 8] * b[ 6] + a[12] * b[ 7];
+    data[i++] = a[ 1] * b[ 4] + a[ 5] * b[ 5] + a[ 9] * b[ 6] + a[13] * b[ 7];
+    data[i++] = a[ 2] * b[ 4] + a[ 6] * b[ 5] + a[10] * b[ 6] + a[14] * b[ 7];
+    data[i++] = a[ 3] * b[ 4] + a[ 7] * b[ 5] + a[11] * b[ 6] + a[15] * b[ 7];
+    data[i++] = a[ 0] * b[ 8] + a[ 4] * b[ 9] + a[ 8] * b[10] + a[12] * b[11];
+    data[i++] = a[ 1] * b[ 8] + a[ 5] * b[ 9] + a[ 9] * b[10] + a[13] * b[11];
+    data[i++] = a[ 2] * b[ 8] + a[ 6] * b[ 9] + a[10] * b[10] + a[14] * b[11];
+    data[i++] = a[ 3] * b[ 8] + a[ 7] * b[ 9] + a[11] * b[10] + a[15] * b[11];
+    data[i++] = a[ 0] * b[12] + a[ 4] * b[13] + a[ 8] * b[14] + a[12] * b[15];
+    data[i++] = a[ 1] * b[12] + a[ 5] * b[13] + a[ 9] * b[14] + a[13] * b[15];
+    data[i++] = a[ 2] * b[12] + a[ 6] * b[13] + a[10] * b[14] + a[14] * b[15];
+    data[i++] = a[ 3] * b[12] + a[ 7] * b[13] + a[11] * b[14] + a[15] * b[15];
+    return (PyObject *)result;
+}
+
+static PyObject *matrix_mul(Matrix *self, PyObject *arg) {
+    if (PyObject_IsInstance(arg, (PyObject *)&MatrixType)) {
+        return matrix_matrix_multiply(self, (Matrix *)arg);
+    }
+    else {
+        return NULL;
+    }
+}
+
+static PyMemberDef matrix_members[] = {
     {NULL}
 };
 
-static PyMethodDef Matrix_methods[] = {
-    {"value", (PyCFunction)Matrix_value, METH_NOARGS, ""},
-    {"identity", (PyCFunction)Matrix_identity, METH_NOARGS, ""},
+static PyMethodDef matrix_methods[] = {
+    {"value", (PyCFunction)matrix_value, METH_NOARGS, ""},
+    {"identity", (PyCFunction)matrix_identity, METH_NOARGS, ""},
     {NULL}
+};
+
+static PyNumberMethods matrix_as_number = {
+    0,                         //nb_add
+    0,                         //nb_subtract
+    (binaryfunc)matrix_mul,    //nb_multiply
+    0,                         //nb_divide
+    0,                         //nb_remainder
+    0,                         //nb_divmod
+    0,                         //nb_power
+    0,                         //nb_negative
+    0,                         //nb_positive
+    0,                         //nb_absolute
+    0,                         //nb_nonzero
+    0,                         //nb_invert
+    0,                         //nb_lshift
+    0,                         //nb_rshift
+    0,                         //nb_and
+    0,                         //nb_xor
+    0,                         //nb_or
+    0,                         //nb_coerce
+    0,                         //nb_int
+    0,                         //nb_long
+    0,                         //nb_float
+    0,                         //nb_oct
+    0,                         //nb_hex
+    0,                         //nb_inplace_add
+    0,                         //nb_inplace_subtract
+    0,                         //nb_inplace_multiply
+    0,                         //nb_inplace_divide
+    0,                         //nb_inplace_remainder
+    0,                         //nb_inplace_power
+    0,                         //nb_inplace_lshift
+    0,                         //nb_inplace_rshift
+    0,                         //nb_inplace_and
+    0,                         //nb_inplace_xor
+    0,                         //nb_inplace_or
+    0,                         //nb_floor_divide
+    0,                         //nb_true_divide
+    0,                         //nb_inplace_floor_divide
+    0,                         //nb_inplace_true_divide
+    0,                         //nb_index
 };
 
 static PyTypeObject MatrixType = {
     PyObject_HEAD_INIT(NULL)
-    0,                         /* ob_size */
-    "Matrix",                  /* tp_name */
-    sizeof(Matrix),            /* tp_basicsize */
-    0,                         /* tp_itemsize */
-    (destructor)Matrix_dealloc, /* tp_dealloc */
-    0,                         /* tp_print */
-    0,                         /* tp_getattr */
-    0,                         /* tp_setattr */
-    0,                         /* tp_compare */
-    0,                         /* tp_repr */
-    0,                         /* tp_as_number */
-    0,                         /* tp_as_sequence */
-    0,                         /* tp_as_mapping */
-    0,                         /* tp_hash */
-    0,                         /* tp_call */
-    0,                         /* tp_str */
-    0,                         /* tp_getattro */
-    0,                         /* tp_setattro */
-    0,                         /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags*/
-    "Matrix object",           /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
-    0,                         /* tp_richcompare */
-    0,                         /* tp_weaklistoffset */
-    0,                         /* tp_iter */
-    0,                         /* tp_iternext */
-    Matrix_methods,            /* tp_methods */
-    Matrix_members,            /* tp_members */
-    0,                         /* tp_getset */
-    0,                         /* tp_base */
-    0,                         /* tp_dict */
-    0,                         /* tp_descr_get */
-    0,                         /* tp_descr_set */
-    0,                         /* tp_dictoffset */
-    (initproc)Matrix_init,     /* tp_init */
-    0,                         /* tp_alloc */
-    0,                         /* tp_new */
+    0,                         // ob_size
+    "Matrix",                  // tp_name
+    sizeof(Matrix),            // tp_basicsize
+    0,                         // tp_itemsize
+    (destructor)matrix_dealloc, // tp_dealloc
+    0,                         // tp_print
+    0,                         // tp_getattr
+    0,                         // tp_setattr
+    0,                         // tp_compare
+    0,                         // tp_repr
+    &matrix_as_number,          // tp_as_number
+    0,                         // tp_as_sequence
+    0,                         // tp_as_mapping
+    0,                         // tp_hash
+    0,                         // tp_call
+    0,                         // tp_str
+    0,                         // tp_getattro
+    0,                         // tp_setattro
+    0,                         // tp_as_buffer
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, // tp_flag
+    "Matrix object",           // tp_doc
+    0,                         // tp_traverse
+    0,                         // tp_clear
+    0,                         // tp_richcompare
+    0,                         // tp_weaklistoffset
+    0,                         // tp_iter
+    0,                         // tp_iternext
+    matrix_methods,            // tp_methods
+    matrix_members,            // tp_members
+    0,                         // tp_getset
+    0,                         // tp_base
+    0,                         // tp_dict
+    0,                         // tp_descr_get
+    0,                         // tp_descr_set
+    0,                         // tp_dictoffset
+    (initproc)matrix_init,     // tp_init
+    0,                         // tp_alloc
+    PyType_GenericNew,         // tp_new
 };
 
 void initmatrix(void) {
@@ -108,7 +184,6 @@ void initmatrix(void) {
     if (module == NULL) {
         return;
     }
-    MatrixType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&MatrixType) < 0) {
         return;
     }

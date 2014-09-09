@@ -1,8 +1,10 @@
 import matrix
 
 def main():
-    m = matrix.Matrix()
-    print m.value()
+    a = matrix.Matrix()
+    b = matrix.Matrix()
+    c = a * b
+    print c.value()
 
 if __name__ == '__main__':
     main()
