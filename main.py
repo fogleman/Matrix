@@ -1,8 +1,8 @@
-import matrix
+from matrix import Matrix
 
 def main():
-    a = matrix.Matrix()
-    b = matrix.Matrix()
+    a = Matrix()
+    b = Matrix()
     c = a * b
     print c.value()
 

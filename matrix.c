@@ -1,6 +1,51 @@
 #include "Python.h"
 #include <structmember.h>
 
+// Matrix Functions
+void mat_identity(double *m) {
+    int i = 0;
+    m[i++] = 1; m[i++] = 0; m[i++] = 0; m[i++] = 0;
+    m[i++] = 0; m[i++] = 1; m[i++] = 0; m[i++] = 0;
+    m[i++] = 0; m[i++] = 0; m[i++] = 1; m[i++] = 0;
+    m[i++] = 0; m[i++] = 0; m[i++] = 0; m[i++] = 1;
+}
+
+void mat_mat_multiply(double *m, double *a, double *b) {
+    int i = 0;
+    m[i++] = a[ 0] * b[ 0] + a[ 4] * b[ 1] + a[ 8] * b[ 2] + a[12] * b[ 3];
+    m[i++] = a[ 1] * b[ 0] + a[ 5] * b[ 1] + a[ 9] * b[ 2] + a[13] * b[ 3];
+    m[i++] = a[ 2] * b[ 0] + a[ 6] * b[ 1] + a[10] * b[ 2] + a[14] * b[ 3];
+    m[i++] = a[ 3] * b[ 0] + a[ 7] * b[ 1] + a[11] * b[ 2] + a[15] * b[ 3];
+    m[i++] = a[ 0] * b[ 4] + a[ 4] * b[ 5] + a[ 8] * b[ 6] + a[12] * b[ 7];
+    m[i++] = a[ 1] * b[ 4] + a[ 5] * b[ 5] + a[ 9] * b[ 6] + a[13] * b[ 7];
+    m[i++] = a[ 2] * b[ 4] + a[ 6] * b[ 5] + a[10] * b[ 6] + a[14] * b[ 7];
+    m[i++] = a[ 3] * b[ 4] + a[ 7] * b[ 5] + a[11] * b[ 6] + a[15] * b[ 7];
+    m[i++] = a[ 0] * b[ 8] + a[ 4] * b[ 9] + a[ 8] * b[10] + a[12] * b[11];
+    m[i++] = a[ 1] * b[ 8] + a[ 5] * b[ 9] + a[ 9] * b[10] + a[13] * b[11];
+    m[i++] = a[ 2] * b[ 8] + a[ 6] * b[ 9] + a[10] * b[10] + a[14] * b[11];
+    m[i++] = a[ 3] * b[ 8] + a[ 7] * b[ 9] + a[11] * b[10] + a[15] * b[11];
+    m[i++] = a[ 0] * b[12] + a[ 4] * b[13] + a[ 8] * b[14] + a[12] * b[15];
+    m[i++] = a[ 1] * b[12] + a[ 5] * b[13] + a[ 9] * b[14] + a[13] * b[15];
+    m[i++] = a[ 2] * b[12] + a[ 6] * b[13] + a[10] * b[14] + a[14] * b[15];
+    m[i++] = a[ 3] * b[12] + a[ 7] * b[13] + a[11] * b[14] + a[15] * b[15];
+}
+
+void mat_vec3_multiply(double *v, double *a, double *b) {
+    int i = 0;
+    v[i++] = a[ 0] * b[0] + a[ 4] * b[1] + a[ 8] * b[2] + a[12];
+    v[i++] = a[ 1] * b[0] + a[ 5] * b[1] + a[ 9] * b[2] + a[13];
+    v[i++] = a[ 2] * b[0] + a[ 6] * b[1] + a[10] * b[2] + a[14];
+}
+
+void mat_vec4_multiply(double *v, double *a, double *b) {
+    int i = 0;
+    v[i++] = a[ 0] * b[0] + a[ 4] * b[1] + a[ 8] * b[2] + a[12] * b[3];
+    v[i++] = a[ 1] * b[0] + a[ 5] * b[1] + a[ 9] * b[2] + a[13] * b[3];
+    v[i++] = a[ 2] * b[0] + a[ 6] * b[1] + a[10] * b[2] + a[14] * b[3];
+    v[i++] = a[ 3] * b[0] + a[ 7] * b[1] + a[11] * b[2] + a[15] * b[3];
+}
+
+// Interface
 typedef struct {
     PyObject_HEAD
     double data[16];
@@ -23,12 +68,7 @@ static int matrix_init(Matrix *self, PyObject *args, PyObject *kwargs) {
         }
     }
     else {
-        int i = 0;
-        double *d = self->data;
-        d[i++] = 1; d[i++] = 0; d[i++] = 0; d[i++] = 0;
-        d[i++] = 0; d[i++] = 1; d[i++] = 0; d[i++] = 0;
-        d[i++] = 0; d[i++] = 0; d[i++] = 1; d[i++] = 0;
-        d[i++] = 0; d[i++] = 0; d[i++] = 0; d[i++] = 1;
+        mat_identity(self->data);
     }
     return 0;
 }
@@ -50,38 +90,16 @@ static PyObject *matrix_identity(Matrix *self) {
     return PyObject_CallObject((PyObject *)&MatrixType, NULL);
 }
 
-static PyObject *matrix_matrix_multiply(Matrix *self, Matrix *arg) {
-    Matrix *result = (Matrix *)matrix_identity(NULL);
-    double *data = result->data;
-    double *a = self->data;
-    double *b = arg->data;
-    int i = 0;
-    data[i++] = a[ 0] * b[ 0] + a[ 4] * b[ 1] + a[ 8] * b[ 2] + a[12] * b[ 3];
-    data[i++] = a[ 1] * b[ 0] + a[ 5] * b[ 1] + a[ 9] * b[ 2] + a[13] * b[ 3];
-    data[i++] = a[ 2] * b[ 0] + a[ 6] * b[ 1] + a[10] * b[ 2] + a[14] * b[ 3];
-    data[i++] = a[ 3] * b[ 0] + a[ 7] * b[ 1] + a[11] * b[ 2] + a[15] * b[ 3];
-    data[i++] = a[ 0] * b[ 4] + a[ 4] * b[ 5] + a[ 8] * b[ 6] + a[12] * b[ 7];
-    data[i++] = a[ 1] * b[ 4] + a[ 5] * b[ 5] + a[ 9] * b[ 6] + a[13] * b[ 7];
-    data[i++] = a[ 2] * b[ 4] + a[ 6] * b[ 5] + a[10] * b[ 6] + a[14] * b[ 7];
-    data[i++] = a[ 3] * b[ 4] + a[ 7] * b[ 5] + a[11] * b[ 6] + a[15] * b[ 7];
-    data[i++] = a[ 0] * b[ 8] + a[ 4] * b[ 9] + a[ 8] * b[10] + a[12] * b[11];
-    data[i++] = a[ 1] * b[ 8] + a[ 5] * b[ 9] + a[ 9] * b[10] + a[13] * b[11];
-    data[i++] = a[ 2] * b[ 8] + a[ 6] * b[ 9] + a[10] * b[10] + a[14] * b[11];
-    data[i++] = a[ 3] * b[ 8] + a[ 7] * b[ 9] + a[11] * b[10] + a[15] * b[11];
-    data[i++] = a[ 0] * b[12] + a[ 4] * b[13] + a[ 8] * b[14] + a[12] * b[15];
-    data[i++] = a[ 1] * b[12] + a[ 5] * b[13] + a[ 9] * b[14] + a[13] * b[15];
-    data[i++] = a[ 2] * b[12] + a[ 6] * b[13] + a[10] * b[14] + a[14] * b[15];
-    data[i++] = a[ 3] * b[12] + a[ 7] * b[13] + a[11] * b[14] + a[15] * b[15];
-    return (PyObject *)result;
-}
-
 static PyObject *matrix_mul(Matrix *self, PyObject *arg) {
     if (PyObject_IsInstance(arg, (PyObject *)&MatrixType)) {
-        return matrix_matrix_multiply(self, (Matrix *)arg);
+        Matrix *result = (Matrix *)matrix_identity(NULL);
+        double *m = result->data;
+        double *a = self->data;
+        double *b = ((Matrix *)arg)->data;
+        mat_mat_multiply(m, a, b);
+        return (PyObject *)result;
     }
-    else {
-        return NULL;
-    }
+    return NULL;
 }
 
 static PyMemberDef matrix_members[] = {
